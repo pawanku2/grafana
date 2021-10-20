@@ -1,6 +1,7 @@
 package notifiers
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"testing"
@@ -37,7 +38,7 @@ func TestNotificationAsConfig(t *testing.T) {
 
 		for i := 1; i < 5; i++ {
 			orgCommand := models.CreateOrgCommand{Name: fmt.Sprintf("Main Org. %v", i)}
-			err := sqlstore.CreateOrg(&orgCommand)
+			err := sqlstore.CreateOrg(context.Background(), &orgCommand)
 			So(err, ShouldBeNil)
 		}
 
@@ -60,7 +61,7 @@ func TestNotificationAsConfig(t *testing.T) {
 				log:               log.New("test logger"),
 			}
 
-			cfg, err := cfgProvider.readConfig(correctProperties)
+			cfg, err := cfgProvider.readConfig(context.Background(), correctProperties)
 			_ = os.Unsetenv("TEST_VAR")
 			if err != nil {
 				t.Fatalf("readConfig return an error %v", err)
@@ -134,7 +135,7 @@ func TestNotificationAsConfig(t *testing.T) {
 			Convey("no notification in database", func() {
 				dc := newNotificationProvisioner(ossencryption.ProvideService(), logger)
 
-				err := dc.applyChanges(twoNotificationsConfig)
+				err := dc.applyChanges(context.Background(), twoNotificationsConfig)
 				if err != nil {
 					t.Fatalf("applyChanges return an error %v", err)
 				}
@@ -163,7 +164,7 @@ func TestNotificationAsConfig(t *testing.T) {
 
 				Convey("should update one notification", func() {
 					dc := newNotificationProvisioner(ossencryption.ProvideService(), logger)
-					err = dc.applyChanges(twoNotificationsConfig)
+					err = dc.applyChanges(context.Background(), twoNotificationsConfig)
 					if err != nil {
 						t.Fatalf("applyChanges return an error %v", err)
 					}
@@ -186,7 +187,7 @@ func TestNotificationAsConfig(t *testing.T) {
 			})
 			Convey("Two notifications with is_default", func() {
 				dc := newNotificationProvisioner(ossencryption.ProvideService(), logger)
-				err := dc.applyChanges(doubleNotificationsConfig)
+				err := dc.applyChanges(context.Background(), doubleNotificationsConfig)
 				Convey("should both be inserted", func() {
 					So(err, ShouldBeNil)
 					notificationsQuery := models.GetAllAlertNotificationsQuery{OrgId: 1}
@@ -228,7 +229,7 @@ func TestNotificationAsConfig(t *testing.T) {
 
 				Convey("should have two new notifications", func() {
 					dc := newNotificationProvisioner(ossencryption.ProvideService(), logger)
-					err := dc.applyChanges(twoNotificationsConfig)
+					err := dc.applyChanges(context.Background(), twoNotificationsConfig)
 					if err != nil {
 						t.Fatalf("applyChanges return an error %v", err)
 					}
@@ -243,11 +244,11 @@ func TestNotificationAsConfig(t *testing.T) {
 
 		Convey("Can read correct properties with orgName instead of orgId", func() {
 			existingOrg1 := models.GetOrgByNameQuery{Name: "Main Org. 1"}
-			err := sqlstore.GetOrgByName(&existingOrg1)
+			err := sqlstore.GetOrgByName(context.Background(), &existingOrg1)
 			So(err, ShouldBeNil)
 			So(existingOrg1.Result, ShouldNotBeNil)
 			existingOrg2 := models.GetOrgByNameQuery{Name: "Main Org. 2"}
-			err = sqlstore.GetOrgByName(&existingOrg2)
+			err = sqlstore.GetOrgByName(context.Background(), &existingOrg2)
 			So(err, ShouldBeNil)
 			So(existingOrg2.Result, ShouldNotBeNil)
 
@@ -261,7 +262,7 @@ func TestNotificationAsConfig(t *testing.T) {
 			So(err, ShouldBeNil)
 
 			dc := newNotificationProvisioner(ossencryption.ProvideService(), logger)
-			err = dc.applyChanges(correctPropertiesWithOrgName)
+			err = dc.applyChanges(context.Background(), correctPropertiesWithOrgName)
 			if err != nil {
 				t.Fatalf("applyChanges return an error %v", err)
 			}
@@ -279,7 +280,7 @@ func TestNotificationAsConfig(t *testing.T) {
 
 		Convey("Config doesn't contain required field", func() {
 			dc := newNotificationProvisioner(ossencryption.ProvideService(), logger)
-			err := dc.applyChanges(noRequiredFields)
+			err := dc.applyChanges(context.Background(), noRequiredFields)
 			So(err, ShouldNotBeNil)
 
 			errString := err.Error()
@@ -292,7 +293,7 @@ func TestNotificationAsConfig(t *testing.T) {
 		Convey("Empty yaml file", func() {
 			Convey("should have not changed repo", func() {
 				dc := newNotificationProvisioner(ossencryption.ProvideService(), logger)
-				err := dc.applyChanges(emptyFile)
+				err := dc.applyChanges(context.Background(), emptyFile)
 				if err != nil {
 					t.Fatalf("applyChanges return an error %v", err)
 				}
@@ -309,7 +310,7 @@ func TestNotificationAsConfig(t *testing.T) {
 				log:               log.New("test logger"),
 			}
 
-			_, err := reader.readConfig(brokenYaml)
+			_, err := reader.readConfig(context.Background(), brokenYaml)
 			So(err, ShouldNotBeNil)
 		})
 
@@ -319,7 +320,7 @@ func TestNotificationAsConfig(t *testing.T) {
 				log:               log.New("test logger"),
 			}
 
-			cfg, err := cfgProvider.readConfig(emptyFolder)
+			cfg, err := cfgProvider.readConfig(context.Background(), emptyFolder)
 			if err != nil {
 				t.Fatalf("readConfig return an error %v", err)
 			}
@@ -331,7 +332,7 @@ func TestNotificationAsConfig(t *testing.T) {
 				encryptionService: ossencryption.ProvideService(),
 				log:               log.New("test logger"),
 			}
-			_, err := cfgProvider.readConfig(unknownNotifier)
+			_, err := cfgProvider.readConfig(context.Background(), unknownNotifier)
 			So(err, ShouldNotBeNil)
 			So(err.Error(), ShouldEqual, `unsupported notification type "nonexisting"`)
 		})
@@ -341,7 +342,7 @@ func TestNotificationAsConfig(t *testing.T) {
 				encryptionService: ossencryption.ProvideService(),
 				log:               log.New("test logger"),
 			}
-			_, err := cfgProvider.readConfig(incorrectSettings)
+			_, err := cfgProvider.readConfig(context.Background(), incorrectSettings)
 			So(err, ShouldNotBeNil)
 			So(err.Error(), ShouldEqual, "alert validation error: token must be specified when using the Slack chat API")
 		})
@@ -350,7 +351,7 @@ func TestNotificationAsConfig(t *testing.T) {
 
 func setupBusHandlers(sqlStore *sqlstore.SQLStore) {
 	bus.AddHandler("getOrg", func(q *models.GetOrgByNameQuery) error {
-		return sqlstore.GetOrgByName(q)
+		return sqlstore.GetOrgByName(context.Background(), q)
 	})
 
 	bus.AddHandler("getAlertNotifications", func(q *models.GetAlertNotificationsWithUidQuery) error {

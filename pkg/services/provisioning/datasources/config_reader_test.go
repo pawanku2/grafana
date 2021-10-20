@@ -147,20 +147,20 @@ func TestDatasourceAsConfig(t *testing.T) {
 
 		Convey("broken yaml should return error", func() {
 			reader := &configReader{}
-			_, err := reader.readConfig(brokenYaml)
+			_, err := reader.readConfig(context.Background(), brokenYaml)
 			So(err, ShouldNotBeNil)
 		})
 
 		Convey("invalid access should warn about invalid value and return 'proxy'", func() {
 			reader := &configReader{log: logger}
-			configs, err := reader.readConfig(invalidAccess)
+			configs, err := reader.readConfig(context.Background(), invalidAccess)
 			So(err, ShouldBeNil)
 			So(configs[0].Datasources[0].Access, ShouldEqual, models.DS_ACCESS_PROXY)
 		})
 
 		Convey("skip invalid directory", func() {
 			cfgProvider := &configReader{log: log.New("test logger")}
-			cfg, err := cfgProvider.readConfig("./invalid-directory")
+			cfg, err := cfgProvider.readConfig(context.Background(), "./invalid-directory")
 			if err != nil {
 				t.Fatalf("readConfig return an error %v", err)
 			}
@@ -171,7 +171,7 @@ func TestDatasourceAsConfig(t *testing.T) {
 		Convey("can read all properties from version 1", func() {
 			_ = os.Setenv("TEST_VAR", "name")
 			cfgProvider := &configReader{log: log.New("test logger")}
-			cfg, err := cfgProvider.readConfig(allProperties)
+			cfg, err := cfgProvider.readConfig(context.Background(), allProperties)
 			_ = os.Unsetenv("TEST_VAR")
 			if err != nil {
 				t.Fatalf("readConfig return an error %v", err)
@@ -200,7 +200,7 @@ func TestDatasourceAsConfig(t *testing.T) {
 
 		Convey("can read all properties from version 0", func() {
 			cfgProvider := &configReader{log: log.New("test logger")}
-			cfg, err := cfgProvider.readConfig(versionZero)
+			cfg, err := cfgProvider.readConfig(context.Background(), versionZero)
 			if err != nil {
 				t.Fatalf("readConfig return an error %v", err)
 			}

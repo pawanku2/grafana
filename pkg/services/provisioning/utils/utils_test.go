@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"context"
 	"testing"
 
 	"github.com/grafana/grafana/pkg/models"
@@ -13,16 +14,16 @@ func TestCheckOrgExists(t *testing.T) {
 		sqlstore.InitTestDB(t)
 
 		defaultOrg := models.CreateOrgCommand{Name: "Main Org."}
-		err := sqlstore.CreateOrg(&defaultOrg)
+		err := sqlstore.CreateOrg(context.Background(), &defaultOrg)
 		So(err, ShouldBeNil)
 
 		Convey("default org exists", func() {
-			err := CheckOrgExists(defaultOrg.Result.Id)
+			err := CheckOrgExists(context.Background(), defaultOrg.Result.Id)
 			So(err, ShouldBeNil)
 		})
 
 		Convey("other org doesn't exist", func() {
-			err := CheckOrgExists(defaultOrg.Result.Id + 1)
+			err := CheckOrgExists(context.Background(), defaultOrg.Result.Id+1)
 			So(err, ShouldEqual, models.ErrOrgNotFound)
 		})
 	})
