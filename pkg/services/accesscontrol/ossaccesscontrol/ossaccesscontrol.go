@@ -69,7 +69,13 @@ func (ac *OSSAccessControlService) Evaluate(ctx context.Context, user *models.Si
 		return false, err
 	}
 
-	return evaluator.Evaluate(accesscontrol.GroupScopesByAction(permissions))
+	// TODO Provide DB
+	resolvedEvaluator, err := ac.scopeResolver.ResolveAttribute(ctx, user, nil, evaluator)
+	if err != nil {
+		return false, err
+	}
+
+	return resolvedEvaluator.Evaluate(accesscontrol.GroupScopesByAction(permissions))
 }
 
 // GetUserRoles returns user permissions based on built-in roles

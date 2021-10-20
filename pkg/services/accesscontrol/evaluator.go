@@ -16,6 +16,8 @@ type Evaluator interface {
 	Evaluate(permissions map[string]map[string]struct{}) (bool, error)
 	// Inject params into the evaluator's templated scopes. e.g. "settings:" + eval.Parameters(":id") and returns a new Evaluator
 	Inject(params ScopeParams) (Evaluator, error)
+	// TODO describe and use function type
+	ResolveScopes(func(string) (string, error)) (Evaluator, error)
 	// String returns a string representation of permission required by the evaluator
 	String() string
 }
@@ -109,6 +111,22 @@ func (p permissionEvaluator) String() string {
 	return fmt.Sprintf("action:%s scopes:%s", p.Action, strings.Join(p.Scopes, ", "))
 }
 
+func (p permissionEvaluator) ResolveScopes(fn func(string) (string, error)) (Evaluator, error) {
+	if p.Scopes == nil {
+		return EvalPermission(p.Action), nil
+	}
+
+	scopes := make([]string, 0, len(p.Scopes))
+	for _, scope := range p.Scopes {
+		resolved, err := fn(scope)
+		if err != nil {
+			return nil, err
+		}
+		scopes = append(scopes, resolved)
+	}
+	return EvalPermission(p.Action, scopes...), nil
+}
+
 var _ Evaluator = new(allEvaluator)
 
 // EvalAll returns evaluator that requires all passed evaluators to evaluate to true
@@ -139,6 +157,18 @@ func (a allEvaluator) Inject(params ScopeParams) (Evaluator, error) {
 		injected = append(injected, i)
 	}
 	return EvalAll(injected...), nil
+}
+
+func (a allEvaluator) ResolveScopes(fn func(string) (string, error)) (Evaluator, error) {
+	var resolved []Evaluator
+	for _, e := range a.allOf {
+		i, err := e.ResolveScopes(fn)
+		if err != nil {
+			return nil, err
+		}
+		resolved = append(resolved, i)
+	}
+	return EvalAll(resolved...), nil
 }
 
 func (a allEvaluator) String() string {
@@ -183,6 +213,18 @@ func (a anyEvaluator) Inject(params ScopeParams) (Evaluator, error) {
 		injected = append(injected, i)
 	}
 	return EvalAny(injected...), nil
+}
+
+func (a anyEvaluator) ResolveScopes(fn func(string) (string, error)) (Evaluator, error) {
+	var resolved []Evaluator
+	for _, e := range a.anyOf {
+		i, err := e.ResolveScopes(fn)
+		if err != nil {
+			return nil, err
+		}
+		resolved = append(resolved, i)
+	}
+	return EvalAny(resolved...), nil
 }
 
 func (a anyEvaluator) String() string {
