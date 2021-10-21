@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/grafana/grafana/pkg/models"
+	"github.com/grafana/grafana/pkg/services/sqlstore"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -55,18 +56,20 @@ func TestResolveKeywordedScope(t *testing.T) {
 	}
 }
 
-type ScopeResolverStoreMock struct{}
-
-func (s *ScopeResolverStoreMock) GetDataSource(_ context.Context, q *models.GetDataSourceQuery) error {
-	q.Result = &models.DataSource{Id: 1}
-	return nil
-}
-
 func TestScopeResolver_ResolveAttribute(t *testing.T) {
+	testdscmd := &models.AddDataSourceCommand{
+		Uid:    "testUID",
+		OrgId:  1,
+		Name:   "testds",
+		Url:    "http://localhost:5432",
+		Type:   "postgresql",
+		Access: "Proxy",
+	}
+
 	tests := []struct {
 		name      string
 		user      *models.SignedInUser
-		db        ScopeResolverStoreMock
+		initDB    func(t *testing.T, db *sqlstore.SQLStore)
 		evaluator Evaluator
 		want      Evaluator
 		wantErr   bool
@@ -86,9 +89,12 @@ func TestScopeResolver_ResolveAttribute(t *testing.T) {
 			wantErr:   false,
 		},
 		{
-			name:      "datasource name resolution evaluator",
-			user:      &models.SignedInUser{OrgId: 1},
-			db:        ScopeResolverStoreMock{},
+			name: "datasource name resolution evaluator",
+			user: &models.SignedInUser{OrgId: 1},
+			initDB: func(t *testing.T, db *sqlstore.SQLStore) {
+				err := db.AddDataSource(context.Background(), testdscmd)
+				assert.NoError(t, err)
+			},
 			evaluator: EvalPermission("datasources:read", Scope("datasources", "name", "testds")),
 			want:      EvalPermission("datasources:read", Scope("datasources", "id", "1")),
 			wantErr:   false,
@@ -96,7 +102,10 @@ func TestScopeResolver_ResolveAttribute(t *testing.T) {
 		{
 			name: "datasource name resolution evaluator",
 			user: &models.SignedInUser{OrgId: 1},
-			db:   ScopeResolverStoreMock{},
+			initDB: func(t *testing.T, db *sqlstore.SQLStore) {
+				err := db.AddDataSource(context.Background(), testdscmd)
+				assert.NoError(t, err)
+			},
 			evaluator: EvalAll(
 				EvalPermission("datasources:read", Scope("datasources", "name", "testds")),
 				EvalAny(
@@ -115,8 +124,15 @@ func TestScopeResolver_ResolveAttribute(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
+		db := sqlstore.InitTestDB(t)
 		resolver := NewScopeResolver()
-		resolvedEvaluator, err := resolver.ResolveAttribute(context.TODO(), tt.user, &tt.db, tt.evaluator)
+		resolver.AddAttributeResolver("datasources:name:", NewResolveDatasourceNameFunc(db))
+
+		if tt.initDB != nil {
+			tt.initDB(t, db)
+		}
+
+		resolvedEvaluator, err := resolver.ResolveAttribute(context.TODO(), tt.user, tt.evaluator)
 		if tt.wantErr {
 			assert.Error(t, err, "expected an error during the resolution of the scope")
 			return

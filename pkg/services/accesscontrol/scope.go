@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/grafana/grafana/pkg/models"
+	"github.com/grafana/grafana/pkg/services/sqlstore"
 )
 
 // Scope builds scope from parts
@@ -47,10 +48,16 @@ func NewScopeResolver() ScopeResolver {
 			"orgs:current": resolveCurrentOrg,
 			"users:self":   resolveUserSelf,
 		},
-		attributeResolvers: map[string]AttributeScopeResolveFunc{
-			"datasources:name:": resolveDatasourceName,
-		},
+		attributeResolvers: map[string]AttributeScopeResolveFunc{},
 	}
+}
+
+func (s *ScopeResolver) AddKeywordResolver(keyword string, fn KeywordScopeResolveFunc) {
+	s.keywordResolvers[keyword] = fn
+}
+
+func (s *ScopeResolver) AddAttributeResolver(prefix string, fn AttributeScopeResolveFunc) {
+	s.attributeResolvers[prefix] = fn
 }
 
 func resolveCurrentOrg(u *models.SignedInUser) (string, error) {
@@ -73,27 +80,24 @@ func (s *ScopeResolver) ResolveKeyword(user *models.SignedInUser, permission Per
 	return &permission, nil
 }
 
-type AttributeScopeResolveFunc func(ctx context.Context, user *models.SignedInUser, db ScopeResolverStore, initialScope string) (string, error)
+type AttributeScopeResolveFunc func(ctx context.Context, user *models.SignedInUser, initialScope string) (string, error)
 
-func resolveDatasourceName(ctx context.Context, user *models.SignedInUser, db ScopeResolverStore, initialScope string) (string, error) {
-	dsName := strings.Split(initialScope, ":")[2]
+// TODO discuss if that pattern is fine. It will allow registering Scope Resolvers using different `Store`.
+func NewResolveDatasourceNameFunc(db *sqlstore.SQLStore) AttributeScopeResolveFunc {
+	return func(ctx context.Context, user *models.SignedInUser, initialScope string) (string, error) {
+		dsName := strings.Split(initialScope, ":")[2]
 
-	query := models.GetDataSourceQuery{Name: dsName, OrgId: user.OrgId}
-	if err := db.GetDataSource(ctx, &query); err != nil {
-		return "", err
+		query := models.GetDataSourceQuery{Name: dsName, OrgId: user.OrgId}
+		if err := db.GetDataSource(ctx, &query); err != nil {
+			return "", err
+		}
+
+		return Scope("datasources", "id", fmt.Sprintf("%v", query.Result.Id)), nil
 	}
-
-	return Scope("datasources", "id", fmt.Sprintf("%v", query.Result.Id)), nil
-}
-
-// TODO maybe think of another design since this prevents registering resolutions
-// ScopeResolverStore holds the methods required for AttributeScopeResolution
-type ScopeResolverStore interface {
-	GetDataSource(context.Context, *models.GetDataSourceQuery) error
 }
 
 // ResolveAttribute resolves scopes with attributes such as `name` or `uid` into `id` based scopes
-func (s *ScopeResolver) ResolveAttribute(ctx context.Context, user *models.SignedInUser, db ScopeResolverStore, evaluator Evaluator) (Evaluator, error) {
+func (s *ScopeResolver) ResolveAttribute(ctx context.Context, user *models.SignedInUser, evaluator Evaluator) (Evaluator, error) {
 	if evaluator == nil {
 		return nil, nil
 	}
@@ -104,7 +108,7 @@ func (s *ScopeResolver) ResolveAttribute(ctx context.Context, user *models.Signe
 		resolvedScope := scope
 		prefix := scopePrefix(scope)
 		if fn, ok := s.attributeResolvers[prefix]; ok {
-			resolvedScope, err = fn(ctx, user, db, scope)
+			resolvedScope, err = fn(ctx, user, scope)
 			if err != nil {
 				return "", fmt.Errorf("could not resolve %v: %v", scope, err)
 			}

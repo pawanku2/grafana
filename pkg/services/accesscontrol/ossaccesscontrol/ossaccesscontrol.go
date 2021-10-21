@@ -9,17 +9,19 @@ import (
 	"github.com/grafana/grafana/pkg/infra/usagestats"
 	"github.com/grafana/grafana/pkg/models"
 	"github.com/grafana/grafana/pkg/services/accesscontrol"
+	"github.com/grafana/grafana/pkg/services/sqlstore"
 	"github.com/grafana/grafana/pkg/setting"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-func ProvideService(cfg *setting.Cfg, usageStats usagestats.Service) *OSSAccessControlService {
+func ProvideService(cfg *setting.Cfg, usageStats usagestats.Service, db *sqlstore.SQLStore) *OSSAccessControlService {
 	s := &OSSAccessControlService{
-		Cfg:           cfg,
-		UsageStats:    usageStats,
-		Log:           log.New("accesscontrol"),
-		scopeResolver: accesscontrol.NewScopeResolver(),
+		Cfg:        cfg,
+		UsageStats: usageStats,
+		Log:        log.New("accesscontrol"),
 	}
+	s.scopeResolver = accesscontrol.NewScopeResolver()
+	s.scopeResolver.AddAttributeResolver("datasources:name:", accesscontrol.NewResolveDatasourceNameFunc(db))
 	s.registerUsageMetrics()
 	return s
 }
@@ -70,7 +72,7 @@ func (ac *OSSAccessControlService) Evaluate(ctx context.Context, user *models.Si
 	}
 
 	// TODO Provide DB
-	resolvedEvaluator, err := ac.scopeResolver.ResolveAttribute(ctx, user, nil, evaluator)
+	resolvedEvaluator, err := ac.scopeResolver.ResolveAttribute(ctx, user, evaluator)
 	if err != nil {
 		return false, err
 	}
