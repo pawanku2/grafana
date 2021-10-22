@@ -19,7 +19,7 @@ func Middleware(ac accesscontrol.AccessControl) func(web.Handler, accesscontrol.
 
 		return func(c *models.ReqContext) {
 			// TODO see if we couldn't do both Injection & Resolution at once to save one loop
-			// Might be worth extracting the ScopeResolver from accesscontrol (We could remove the Evaluate function from the interface alltogether)
+			// Might be worth extracting the ScopeResolver from accesscontrol (We could remove the Evaluate function from the interface altogether)
 			injected, err := evaluator.ModifyScopes(accesscontrol.ScopeInjector(buildScopeParams(c)))
 			if err != nil {
 				c.JsonApiErr(http.StatusInternalServerError, "Internal server error", err)
