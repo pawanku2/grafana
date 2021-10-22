@@ -150,15 +150,15 @@ func (a allEvaluator) Evaluate(permissions map[string]map[string]struct{}) (bool
 }
 
 func (a allEvaluator) ModifyScopes(modifiers ...ScopeModifier) (Evaluator, error) {
-	var resolved []Evaluator
+	var modified []Evaluator
 	for _, e := range a.allOf {
 		i, err := e.ModifyScopes(modifiers...)
 		if err != nil {
 			return nil, err
 		}
-		resolved = append(resolved, i)
+		modified = append(modified, i)
 	}
-	return EvalAll(resolved...), nil
+	return EvalAll(modified...), nil
 }
 
 func (a allEvaluator) String() string {
@@ -194,15 +194,15 @@ func (a anyEvaluator) Evaluate(permissions map[string]map[string]struct{}) (bool
 }
 
 func (a anyEvaluator) ModifyScopes(modifiers ...ScopeModifier) (Evaluator, error) {
-	var resolved []Evaluator
+	var modified []Evaluator
 	for _, e := range a.anyOf {
 		i, err := e.ModifyScopes(modifiers...)
 		if err != nil {
 			return nil, err
 		}
-		resolved = append(resolved, i)
+		modified = append(modified, i)
 	}
-	return EvalAny(resolved...), nil
+	return EvalAny(modified...), nil
 }
 
 func (a anyEvaluator) String() string {
