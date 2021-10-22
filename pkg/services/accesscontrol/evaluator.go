@@ -11,8 +11,10 @@ import (
 
 var logger = log.New("accesscontrol.evaluator")
 
+// ScopeModifier alters a Scope to return a new modified Scope
 type ScopeModifier func(string) (string, error)
 
+//Inject params into the evaluator's templated scopes. e.g. "settings:" + eval.Parameters(":id")
 func ScopeInjector(params ScopeParams) ScopeModifier {
 	return func(scope string) (string, error) {
 		tmpl, err := template.New("scope").Parse(scope)
@@ -30,7 +32,7 @@ func ScopeInjector(params ScopeParams) ScopeModifier {
 type Evaluator interface {
 	// Evaluate permissions that are grouped by action
 	Evaluate(permissions map[string]map[string]struct{}) (bool, error)
-	// ModifyScopes executes a sequence of ScopeModifier functions on all embedded scopes of an evaluator
+	// ModifyScopes executes a sequence of ScopeModifier functions on all embedded scopes of an evaluator and returns a new Evaluator
 	ModifyScopes(...ScopeModifier) (Evaluator, error)
 	// String returns a string representation of permission required by the evaluator
 	String() string
