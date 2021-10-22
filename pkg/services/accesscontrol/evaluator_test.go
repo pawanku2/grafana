@@ -137,7 +137,7 @@ func TestPermission_Inject(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.desc, func(t *testing.T) {
-			injected, err := test.evaluator.Inject(test.params)
+			injected, err := test.evaluator.ModifyScopes(ScopeInjector(test.params))
 			assert.NoError(t, err)
 			ok, err := injected.Evaluate(test.permissions)
 			assert.NoError(t, err)
@@ -261,7 +261,7 @@ func TestAll_Inject(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.desc, func(t *testing.T) {
-			injected, err := test.evaluator.Inject(test.params)
+			injected, err := test.evaluator.ModifyScopes(ScopeInjector(test.params))
 			assert.NoError(t, err)
 			ok, err := injected.Evaluate(test.permissions)
 			assert.NoError(t, err)
@@ -383,7 +383,7 @@ func TestAny_Inject(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.desc, func(t *testing.T) {
-			injected, err := test.evaluator.Inject(test.params)
+			injected, err := test.evaluator.ModifyScopes(ScopeInjector(test.params))
 			assert.NoError(t, err)
 			ok, err := injected.Evaluate(test.permissions)
 			assert.NoError(t, err)

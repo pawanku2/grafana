@@ -30,9 +30,6 @@ type ScopeModifier func(string) (string, error)
 type Evaluator interface {
 	// Evaluate permissions that are grouped by action
 	Evaluate(permissions map[string]map[string]struct{}) (bool, error)
-	// TODO Remove in favor of ModifyScopes
-	// Inject params into the evaluator's templated scopes. e.g. "settings:" + eval.Parameters(":id") and returns a new Evaluator
-	Inject(params ScopeParams) (Evaluator, error)
 	// TODO describe and use function type
 	ModifyScopes(ScopeModifier) (Evaluator, error)
 	// String returns a string representation of permission required by the evaluator
@@ -108,22 +105,6 @@ func match(scope, target string) (bool, error) {
 	return scope == target, nil
 }
 
-func (p permissionEvaluator) Inject(params ScopeParams) (Evaluator, error) {
-	scopes := make([]string, 0, len(p.Scopes))
-	for _, scope := range p.Scopes {
-		tmpl, err := template.New("scope").Parse(scope)
-		if err != nil {
-			return nil, err
-		}
-		var buf bytes.Buffer
-		if err = tmpl.Execute(&buf, params); err != nil {
-			return nil, err
-		}
-		scopes = append(scopes, buf.String())
-	}
-	return EvalPermission(p.Action, scopes...), nil
-}
-
 func (p permissionEvaluator) String() string {
 	return fmt.Sprintf("action:%s scopes:%s", p.Action, strings.Join(p.Scopes, ", "))
 }
@@ -162,18 +143,6 @@ func (a allEvaluator) Evaluate(permissions map[string]map[string]struct{}) (bool
 		}
 	}
 	return true, nil
-}
-
-func (a allEvaluator) Inject(params ScopeParams) (Evaluator, error) {
-	var injected []Evaluator
-	for _, e := range a.allOf {
-		i, err := e.Inject(params)
-		if err != nil {
-			return nil, err
-		}
-		injected = append(injected, i)
-	}
-	return EvalAll(injected...), nil
 }
 
 func (a allEvaluator) ModifyScopes(fn ScopeModifier) (Evaluator, error) {
@@ -218,18 +187,6 @@ func (a anyEvaluator) Evaluate(permissions map[string]map[string]struct{}) (bool
 		}
 	}
 	return false, nil
-}
-
-func (a anyEvaluator) Inject(params ScopeParams) (Evaluator, error) {
-	var injected []Evaluator
-	for _, e := range a.anyOf {
-		i, err := e.Inject(params)
-		if err != nil {
-			return nil, err
-		}
-		injected = append(injected, i)
-	}
-	return EvalAny(injected...), nil
 }
 
 func (a anyEvaluator) ModifyScopes(fn ScopeModifier) (Evaluator, error) {
