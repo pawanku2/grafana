@@ -83,8 +83,9 @@ func (s *ScopeResolver) ResolveKeyword(user *models.SignedInUser, permission Per
 type AttributeScopeResolveFunc func(ctx context.Context, user *models.SignedInUser, initialScope string) (string, error)
 
 // TODO discuss if that pattern is fine. It will become useful when registering Scope Resolvers that rely on different `Store`.
-func NewResolveDatasourceNameFunc(db *sqlstore.SQLStore) AttributeScopeResolveFunc {
-	return func(ctx context.Context, user *models.SignedInUser, initialScope string) (string, error) {
+// TODO register this from a datasource service, instead?
+func NewDatasourceNameScopeResolver(db *sqlstore.SQLStore) (string, AttributeScopeResolveFunc) {
+	dsNameResolver := func(ctx context.Context, user *models.SignedInUser, initialScope string) (string, error) {
 		dsName := strings.Split(initialScope, ":")[2]
 
 		query := models.GetDataSourceQuery{Name: dsName, OrgId: user.OrgId}
@@ -94,6 +95,7 @@ func NewResolveDatasourceNameFunc(db *sqlstore.SQLStore) AttributeScopeResolveFu
 
 		return Scope("datasources", "id", fmt.Sprintf("%v", query.Result.Id)), nil
 	}
+	return "datasources:name:", dsNameResolver
 }
 
 // GetResolveAttributeScopeModifier resolves scopes with attributes such as `name` or `uid` into `id` based scopes

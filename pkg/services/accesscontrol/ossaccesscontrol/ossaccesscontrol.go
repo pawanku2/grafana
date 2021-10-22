@@ -21,7 +21,7 @@ func ProvideService(cfg *setting.Cfg, usageStats usagestats.Service, db *sqlstor
 		Log:        log.New("accesscontrol"),
 	}
 	s.scopeResolver = accesscontrol.NewScopeResolver()
-	s.scopeResolver.AddAttributeResolver("datasources:name:", accesscontrol.NewResolveDatasourceNameFunc(db))
+	s.scopeResolver.AddAttributeResolver(accesscontrol.NewDatasourceNameScopeResolver(db))
 	s.registerUsageMetrics()
 	return s
 }

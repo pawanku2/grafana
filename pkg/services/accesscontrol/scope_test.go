@@ -119,7 +119,7 @@ func TestScopeResolver_ResolveAttribute(t *testing.T) {
 	for _, tt := range tests {
 		db := sqlstore.InitTestDB(t)
 		resolver := NewScopeResolver()
-		resolver.AddAttributeResolver("datasources:name:", NewResolveDatasourceNameFunc(db))
+		resolver.AddAttributeResolver(NewDatasourceNameScopeResolver(db))
 
 		if tt.initDB != nil {
 			tt.initDB(t, db)
