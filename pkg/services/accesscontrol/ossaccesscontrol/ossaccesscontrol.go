@@ -71,7 +71,6 @@ func (ac *OSSAccessControlService) Evaluate(ctx context.Context, user *models.Si
 		return false, err
 	}
 
-	// TODO Provide DB
 	resolvedEvaluator, err := ac.scopeResolver.ResolveAttribute(ctx, user, evaluator)
 	if err != nil {
 		return false, err

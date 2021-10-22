@@ -82,7 +82,7 @@ func (s *ScopeResolver) ResolveKeyword(user *models.SignedInUser, permission Per
 
 type AttributeScopeResolveFunc func(ctx context.Context, user *models.SignedInUser, initialScope string) (string, error)
 
-// TODO discuss if that pattern is fine. It will allow registering Scope Resolvers using different `Store`.
+// TODO discuss if that pattern is fine. It will become useful when registering Scope Resolvers that rely on different `Store`.
 func NewResolveDatasourceNameFunc(db *sqlstore.SQLStore) AttributeScopeResolveFunc {
 	return func(ctx context.Context, user *models.SignedInUser, initialScope string) (string, error) {
 		dsName := strings.Split(initialScope, ":")[2]
@@ -104,6 +104,7 @@ func (s *ScopeResolver) ResolveAttribute(ctx context.Context, user *models.Signe
 
 	// TODO simplify, this way of doing seems a bit complex
 	rebaseScope := func(scope string) (string, error) {
+		// TODO implement caching to speed this up
 		var err error
 		resolvedScope := scope
 		prefix := scopePrefix(scope)
@@ -116,7 +117,7 @@ func (s *ScopeResolver) ResolveAttribute(ctx context.Context, user *models.Signe
 		return resolvedScope, nil
 	}
 
-	return evaluator.ResolveScopes(rebaseScope)
+	return evaluator.ModifyScopes(rebaseScope)
 }
 
 func scopePrefix(scope string) string {

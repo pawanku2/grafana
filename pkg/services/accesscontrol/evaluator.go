@@ -11,13 +11,30 @@ import (
 
 var logger = log.New("accesscontrol.evaluator")
 
+func ScopeInjector(params ScopeParams) ScopeModifier {
+	return func(scope string) (string, error) {
+		tmpl, err := template.New("scope").Parse(scope)
+		if err != nil {
+			return "", err
+		}
+		var buf bytes.Buffer
+		if err = tmpl.Execute(&buf, params); err != nil {
+			return "", err
+		}
+		return buf.String(), nil
+	}
+}
+
+type ScopeModifier func(string) (string, error)
+
 type Evaluator interface {
 	// Evaluate permissions that are grouped by action
 	Evaluate(permissions map[string]map[string]struct{}) (bool, error)
+	// TODO Remove in favor of ModifyScopes
 	// Inject params into the evaluator's templated scopes. e.g. "settings:" + eval.Parameters(":id") and returns a new Evaluator
 	Inject(params ScopeParams) (Evaluator, error)
 	// TODO describe and use function type
-	ResolveScopes(func(string) (string, error)) (Evaluator, error)
+	ModifyScopes(ScopeModifier) (Evaluator, error)
 	// String returns a string representation of permission required by the evaluator
 	String() string
 }
@@ -111,7 +128,7 @@ func (p permissionEvaluator) String() string {
 	return fmt.Sprintf("action:%s scopes:%s", p.Action, strings.Join(p.Scopes, ", "))
 }
 
-func (p permissionEvaluator) ResolveScopes(fn func(string) (string, error)) (Evaluator, error) {
+func (p permissionEvaluator) ModifyScopes(fn ScopeModifier) (Evaluator, error) {
 	if p.Scopes == nil {
 		return EvalPermission(p.Action), nil
 	}
@@ -159,10 +176,10 @@ func (a allEvaluator) Inject(params ScopeParams) (Evaluator, error) {
 	return EvalAll(injected...), nil
 }
 
-func (a allEvaluator) ResolveScopes(fn func(string) (string, error)) (Evaluator, error) {
+func (a allEvaluator) ModifyScopes(fn ScopeModifier) (Evaluator, error) {
 	var resolved []Evaluator
 	for _, e := range a.allOf {
-		i, err := e.ResolveScopes(fn)
+		i, err := e.ModifyScopes(fn)
 		if err != nil {
 			return nil, err
 		}
@@ -215,10 +232,10 @@ func (a anyEvaluator) Inject(params ScopeParams) (Evaluator, error) {
 	return EvalAny(injected...), nil
 }
 
-func (a anyEvaluator) ResolveScopes(fn func(string) (string, error)) (Evaluator, error) {
+func (a anyEvaluator) ModifyScopes(fn ScopeModifier) (Evaluator, error) {
 	var resolved []Evaluator
 	for _, e := range a.anyOf {
-		i, err := e.ResolveScopes(fn)
+		i, err := e.ModifyScopes(fn)
 		if err != nil {
 			return nil, err
 		}
