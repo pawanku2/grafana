@@ -73,7 +73,7 @@ func (s *ScopeResolver) ResolveKeyword(user *models.SignedInUser, permission Per
 	if fn, ok := s.keywordResolvers[permission.Scope]; ok {
 		resolvedScope, err := fn(user)
 		if err != nil {
-			return nil, fmt.Errorf("could not resolve \"%v\": %v", permission.Scope, err)
+			return nil, fmt.Errorf("could not resolve %v: %v", permission.Scope, err)
 		}
 		permission.Scope = resolvedScope
 	}
