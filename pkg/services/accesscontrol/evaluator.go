@@ -105,10 +105,6 @@ func match(scope, target string) (bool, error) {
 	return scope == target, nil
 }
 
-func (p permissionEvaluator) String() string {
-	return fmt.Sprintf("action:%s scopes:%s", p.Action, strings.Join(p.Scopes, ", "))
-}
-
 func (p permissionEvaluator) ModifyScopes(modifiers ...ScopeModifier) (Evaluator, error) {
 	var err error
 	if p.Scopes == nil {
@@ -127,6 +123,10 @@ func (p permissionEvaluator) ModifyScopes(modifiers ...ScopeModifier) (Evaluator
 		scopes = append(scopes, modified)
 	}
 	return EvalPermission(p.Action, scopes...), nil
+}
+
+func (p permissionEvaluator) String() string {
+	return fmt.Sprintf("action:%s scopes:%s", p.Action, strings.Join(p.Scopes, ", "))
 }
 
 var _ Evaluator = new(allEvaluator)
