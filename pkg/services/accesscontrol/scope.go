@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"strings"
 
+	gocache "github.com/patrickmn/go-cache"
+
+	"github.com/grafana/grafana/pkg/infra/localcache"
 	"github.com/grafana/grafana/pkg/models"
 	"github.com/grafana/grafana/pkg/services/sqlstore"
 )
@@ -40,15 +43,19 @@ type KeywordScopeResolveFunc func(*models.SignedInUser) (string, error)
 type ScopeResolver struct {
 	keywordResolvers   map[string]KeywordScopeResolveFunc
 	attributeResolvers map[string]AttributeScopeResolveFunc
+	cache              *localcache.CacheService
 }
 
 func NewScopeResolver() ScopeResolver {
 	return ScopeResolver{
+		// TODO add logger and logs
 		keywordResolvers: map[string]KeywordScopeResolveFunc{
 			"orgs:current": resolveCurrentOrg,
 			"users:self":   resolveUserSelf,
 		},
 		attributeResolvers: map[string]AttributeScopeResolveFunc{},
+		cache:              localcache.ProvideService(),
+		// TODO fix the settings of the cache or receive the as param
 	}
 }
 
@@ -101,15 +108,21 @@ func NewDatasourceNameScopeResolver(db *sqlstore.SQLStore) (string, AttributeSco
 // GetResolveAttributeScopeModifier resolves scopes with attributes such as `name` or `uid` into `id` based scopes
 func (s *ScopeResolver) GetResolveAttributeScopeModifier(ctx context.Context, user *models.SignedInUser) ScopeModifier {
 	return func(scope string) (string, error) {
-		// TODO implement caching to speed this up
 		var err error
+		// By default the scope remains unchanged
 		resolvedScope := scope
 		prefix := scopePrefix(scope)
-		if fn, ok := s.attributeResolvers[prefix]; ok {
+
+		// Check cache before computing the scope
+		if cacheScope, ok := s.cache.Get(prefix); ok {
+			resolvedScope = cacheScope.(string)
+		} else if fn, ok := s.attributeResolvers[prefix]; ok {
 			resolvedScope, err = fn(ctx, user, scope)
 			if err != nil {
 				return "", fmt.Errorf("could not resolve %v: %v", scope, err)
 			}
+			// Cache result
+			s.cache.Set(prefix, resolvedScope, gocache.DefaultExpiration)
 		}
 		return resolvedScope, nil
 	}
