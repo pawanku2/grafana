@@ -71,7 +71,8 @@ func (ac *OSSAccessControlService) Evaluate(ctx context.Context, user *models.Si
 		return false, err
 	}
 
-	resolvedEvaluator, err := ac.scopeResolver.ResolveAttribute(ctx, user, evaluator)
+	attributeModifier := ac.scopeResolver.GetResolveAttributeScopeModifier(ctx, user)
+	resolvedEvaluator, err := evaluator.ModifyScopes(attributeModifier)
 	if err != nil {
 		return false, err
 	}

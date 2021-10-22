@@ -75,13 +75,6 @@ func TestScopeResolver_ResolveAttribute(t *testing.T) {
 		wantErr   bool
 	}{
 		{
-			name:      "nil evaluator",
-			user:      nil,
-			evaluator: nil,
-			want:      nil,
-			wantErr:   false,
-		},
-		{
 			name:      "no resolution evaluator",
 			user:      nil,
 			evaluator: EvalPermission("datasources:read"),
@@ -131,8 +124,8 @@ func TestScopeResolver_ResolveAttribute(t *testing.T) {
 		if tt.initDB != nil {
 			tt.initDB(t, db)
 		}
-
-		resolvedEvaluator, err := resolver.ResolveAttribute(context.TODO(), tt.user, tt.evaluator)
+		scopeModifier := resolver.GetResolveAttributeScopeModifier(context.TODO(), tt.user)
+		resolvedEvaluator, err := tt.evaluator.ModifyScopes(scopeModifier)
 		if tt.wantErr {
 			assert.Error(t, err, "expected an error during the resolution of the scope")
 			return

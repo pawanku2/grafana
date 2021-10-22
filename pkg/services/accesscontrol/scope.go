@@ -96,14 +96,9 @@ func NewResolveDatasourceNameFunc(db *sqlstore.SQLStore) AttributeScopeResolveFu
 	}
 }
 
-// ResolveAttribute resolves scopes with attributes such as `name` or `uid` into `id` based scopes
-func (s *ScopeResolver) ResolveAttribute(ctx context.Context, user *models.SignedInUser, evaluator Evaluator) (Evaluator, error) {
-	if evaluator == nil {
-		return nil, nil
-	}
-
-	// TODO simplify, this way of doing seems a bit complex
-	rebaseScope := func(scope string) (string, error) {
+// GetResolveAttributeScopeModifier resolves scopes with attributes such as `name` or `uid` into `id` based scopes
+func (s *ScopeResolver) GetResolveAttributeScopeModifier(ctx context.Context, user *models.SignedInUser) ScopeModifier {
+	return func(scope string) (string, error) {
 		// TODO implement caching to speed this up
 		var err error
 		resolvedScope := scope
@@ -116,8 +111,6 @@ func (s *ScopeResolver) ResolveAttribute(ctx context.Context, user *models.Signe
 		}
 		return resolvedScope, nil
 	}
-
-	return evaluator.ModifyScopes(rebaseScope)
 }
 
 func scopePrefix(scope string) string {
