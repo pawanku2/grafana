@@ -110,12 +110,14 @@ func (ac *OSSAccessControlService) GetUserPermissions(ctx context.Context, user 
 					continue
 				}
 				for _, p := range role.Permissions {
+					var err error
 					// if the permission has a keyword in its scope it will be resolved
-					permission, err := ac.scopeResolver.ResolveKeyword(user, p)
+					keywordModifier := ac.scopeResolver.GetResolveKeywordScopeModifier(user)
+					p.Scope, err = keywordModifier(p.Scope)
 					if err != nil {
 						return nil, err
 					}
-					permissions = append(permissions, permission)
+					permissions = append(permissions, &p)
 				}
 			}
 		}

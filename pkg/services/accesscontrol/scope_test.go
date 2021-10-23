@@ -24,34 +24,36 @@ func TestResolveKeywordedScope(t *testing.T) {
 		name       string
 		user       *models.SignedInUser
 		permission Permission
-		want       *Permission
+		want       Permission
 		wantErr    bool
 	}{
 		{
 			name:       "no scope",
 			user:       testUser,
 			permission: Permission{Action: "users:read"},
-			want:       &Permission{Action: "users:read"},
+			want:       Permission{Action: "users:read"},
 			wantErr:    false,
 		},
 		{
 			name:       "user if resolution",
 			user:       testUser,
 			permission: Permission{Action: "users:read", Scope: "users:self"},
-			want:       &Permission{Action: "users:read", Scope: "users:id:2"},
+			want:       Permission{Action: "users:read", Scope: "users:id:2"},
 			wantErr:    false,
 		},
 	}
 	for _, tt := range tests {
+		var err error
 		t.Run(tt.name, func(t *testing.T) {
 			resolver := NewScopeResolver()
-			resolved, err := resolver.ResolveKeyword(tt.user, tt.permission)
+			scopeModifier := resolver.GetResolveKeywordScopeModifier(tt.user)
+			tt.permission.Scope, err = scopeModifier(tt.permission.Scope)
 			if tt.wantErr {
 				assert.Error(t, err, "expected an error during the resolution of the scope")
 				return
 			}
 			assert.NoError(t, err)
-			assert.EqualValues(t, tt.want, resolved, "permission did not match expected resolution")
+			assert.EqualValues(t, tt.want, tt.permission, "permission did not match expected resolution")
 		})
 	}
 }

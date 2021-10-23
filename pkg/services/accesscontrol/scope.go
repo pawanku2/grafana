@@ -55,7 +55,7 @@ func NewScopeResolver() ScopeResolver {
 		},
 		attributeResolvers: map[string]AttributeScopeResolveFunc{},
 		cache:              localcache.ProvideService(),
-		// TODO fix the settings of the cache or receive the as param
+		// TODO fix the settings of the cache or receive it as param
 	}
 }
 
@@ -75,16 +75,22 @@ func resolveUserSelf(u *models.SignedInUser) (string, error) {
 	return Scope("users", "id", fmt.Sprintf("%v", u.UserId)), nil
 }
 
-// ResolveKeyword resolves scope with keywords such as `self` or `current` into `id` based scopes
-func (s *ScopeResolver) ResolveKeyword(user *models.SignedInUser, permission Permission) (*Permission, error) {
-	if fn, ok := s.keywordResolvers[permission.Scope]; ok {
-		resolvedScope, err := fn(user)
-		if err != nil {
-			return nil, fmt.Errorf("could not resolve %v: %v", permission.Scope, err)
+// GetResolveKeywordScopeModifier returns a function to resolves scope with keywords such as `self` or `current` into `id` based scopes
+// TODO discuss if it's worth making this symmetrical with attribute resolution
+func (s *ScopeResolver) GetResolveKeywordScopeModifier(user *models.SignedInUser) ScopeModifier {
+	return func(scope string) (string, error) {
+		var err error
+		// By default the scope remains unchanged
+		resolvedScope := scope
+		if fn, ok := s.keywordResolvers[scope]; ok {
+			resolvedScope, err = fn(user)
+			if err != nil {
+				return "", fmt.Errorf("could not resolve %v: %v", scope, err)
+			}
+
 		}
-		permission.Scope = resolvedScope
+		return resolvedScope, nil
 	}
-	return &permission, nil
 }
 
 type AttributeScopeResolveFunc func(ctx context.Context, user *models.SignedInUser, initialScope string) (string, error)
@@ -105,7 +111,7 @@ func NewDatasourceNameScopeResolver(db *sqlstore.SQLStore) (string, AttributeSco
 	return "datasources:name:", dsNameResolver
 }
 
-// GetResolveAttributeScopeModifier resolves scopes with attributes such as `name` or `uid` into `id` based scopes
+// GetResolveAttributeScopeModifier returns a function to resolves scopes with attributes such as `name` or `uid` into `id` based scopes
 func (s *ScopeResolver) GetResolveAttributeScopeModifier(ctx context.Context, user *models.SignedInUser) ScopeModifier {
 	return func(scope string) (string, error) {
 		var err error
