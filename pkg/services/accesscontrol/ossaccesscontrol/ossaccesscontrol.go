@@ -16,11 +16,12 @@ import (
 
 func ProvideService(cfg *setting.Cfg, usageStats usagestats.Service, db *sqlstore.SQLStore) *OSSAccessControlService {
 	s := &OSSAccessControlService{
-		Cfg:        cfg,
-		UsageStats: usageStats,
-		Log:        log.New("accesscontrol"),
+		Cfg:           cfg,
+		UsageStats:    usageStats,
+		Log:           log.New("accesscontrol"),
+		scopeResolver: accesscontrol.NewScopeResolver(),
 	}
-	s.scopeResolver = accesscontrol.NewScopeResolver()
+	// TODO register from somewhere else?
 	s.scopeResolver.AddAttributeResolver(accesscontrol.NewDatasourceNameScopeResolver(db))
 	s.registerUsageMetrics()
 	return s
@@ -71,6 +72,7 @@ func (ac *OSSAccessControlService) Evaluate(ctx context.Context, user *models.Si
 		return false, err
 	}
 
+	// TODO perform injection as well?
 	attributeModifier := ac.scopeResolver.GetResolveAttributeScopeModifier(ctx, user)
 	resolvedEvaluator, err := evaluator.ModifyScopes(attributeModifier)
 	if err != nil {
