@@ -119,21 +119,22 @@ func NewDatasourceNameScopeResolver(db *sqlstore.SQLStore) (string, AttributeSco
 // GetResolveAttributeScopeMutator returns a function to resolve scopes with attributes such as `name` or `uid` into `id` based scopes
 func (s *ScopeResolver) GetResolveAttributeScopeMutator(ctx context.Context, user *models.SignedInUser) ScopeMutator {
 	return func(scope string) (string, error) {
+		// Check cache before computing the scope
+		if cacheScope, ok := s.cache.Get(scope); ok {
+			return cacheScope.(string), nil
+		}
+
 		var err error
 		// By default the scope remains unchanged
 		resolvedScope := scope
 		prefix := scopePrefix(scope)
-
-		// Check cache before computing the scope
-		if cacheScope, ok := s.cache.Get(prefix); ok {
-			resolvedScope = cacheScope.(string)
-		} else if fn, ok := s.attributeResolvers[prefix]; ok {
+		if fn, ok := s.attributeResolvers[prefix]; ok {
 			resolvedScope, err = fn(ctx, user, scope)
 			if err != nil {
 				return "", fmt.Errorf("could not resolve %v: %v", scope, err)
 			}
 			// Cache result
-			s.cache.Set(prefix, resolvedScope, gocache.DefaultExpiration)
+			s.cache.Set(scope, resolvedScope, gocache.DefaultExpiration)
 		}
 		return resolvedScope, nil
 	}
