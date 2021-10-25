@@ -97,6 +97,17 @@ func (ac *OSSAccessControlService) LinkAPIKeyToServiceAccount(context.Context, *
 	return errors.New("link SA not implemented yet in service accounts") //Please switch on Enterprise to test this
 }
 
+func (ac *OSSAccessControlService) resolveScopeKeyword(p accesscontrol.Permission, user *models.SignedInUser) (*accesscontrol.Permission, error) {
+	var err error
+	// if the permission has a keyword in its scope it will be resolved
+	keywordModifier := ac.scopeResolver.GetResolveKeywordScopeMutator(user)
+	p.Scope, err = keywordModifier(p.Scope)
+	if err != nil {
+		return nil, err
+	}
+	return &p, nil
+}
+
 // GetUserPermissions returns user permissions based on built-in roles
 func (ac *OSSAccessControlService) GetUserPermissions(ctx context.Context, user *models.SignedInUser) ([]*accesscontrol.Permission, error) {
 	timer := prometheus.NewTimer(metrics.MAccessPermissionsSummary)
@@ -112,13 +123,7 @@ func (ac *OSSAccessControlService) GetUserPermissions(ctx context.Context, user 
 					continue
 				}
 				for _, p := range role.Permissions {
-					var err error
-					// if the permission has a keyword in its scope it will be resolved
-					keywordModifier := ac.scopeResolver.GetResolveKeywordScopeMutator(user)
-					p.Scope, err = keywordModifier(p.Scope)
-					if err != nil {
-						return nil, err
-					}
+					ac.resolveScopeKeyword(p, user)
 					permissions = append(permissions, &p)
 				}
 			}
