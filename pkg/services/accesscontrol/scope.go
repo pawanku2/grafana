@@ -1,8 +1,10 @@
 package accesscontrol
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"html/template"
 	"strings"
 
 	gocache "github.com/patrickmn/go-cache"
@@ -42,7 +44,7 @@ type ScopeMutator func(string) (string, error)
 
 type KeywordScopeResolveFunc func(*models.SignedInUser) (string, error)
 
-// ScopeResolver contains a map of functions to resolve scope keywords such as `self` or `current` into `id` based scopes
+// ScopeResolver is used to resolve scope keywords such as `self` or `current` into `id` based scopes and scope attributes such as `name` or `uid` into `id` based scopes.
 type ScopeResolver struct {
 	keywordResolvers   map[string]KeywordScopeResolveFunc
 	attributeResolvers map[string]AttributeScopeResolveFunc
@@ -78,9 +80,9 @@ func resolveUserSelf(u *models.SignedInUser) (string, error) {
 	return Scope("users", "id", fmt.Sprintf("%v", u.UserId)), nil
 }
 
-// GetResolveKeywordScopeModifier returns a function to resolves scope with keywords such as `self` or `current` into `id` based scopes
+// GetResolveKeywordScopeMutator returns a function to resolve scope with keywords such as `self` or `current` into `id` based scopes
 // TODO discuss if it's worth making this symmetrical with attribute resolution
-func (s *ScopeResolver) GetResolveKeywordScopeModifier(user *models.SignedInUser) ScopeMutator {
+func (s *ScopeResolver) GetResolveKeywordScopeMutator(user *models.SignedInUser) ScopeMutator {
 	return func(scope string) (string, error) {
 		var err error
 		// By default the scope remains unchanged
@@ -114,8 +116,8 @@ func NewDatasourceNameScopeResolver(db *sqlstore.SQLStore) (string, AttributeSco
 	return "datasources:name:", dsNameResolver
 }
 
-// GetResolveAttributeScopeModifier returns a function to resolves scopes with attributes such as `name` or `uid` into `id` based scopes
-func (s *ScopeResolver) GetResolveAttributeScopeModifier(ctx context.Context, user *models.SignedInUser) ScopeMutator {
+// GetResolveAttributeScopeMutator returns a function to resolve scopes with attributes such as `name` or `uid` into `id` based scopes
+func (s *ScopeResolver) GetResolveAttributeScopeMutator(ctx context.Context, user *models.SignedInUser) ScopeMutator {
 	return func(scope string) (string, error) {
 		var err error
 		// By default the scope remains unchanged
@@ -142,4 +144,19 @@ func scopePrefix(scope string) string {
 	n := len(parts) - 1
 	parts[n] = ""
 	return strings.Join(parts, ":")
+}
+
+//Inject params into the evaluator's templated scopes. e.g. "settings:" + eval.Parameters(":id")
+func ScopeInjector(params ScopeParams) ScopeMutator {
+	return func(scope string) (string, error) {
+		tmpl, err := template.New("scope").Parse(scope)
+		if err != nil {
+			return "", err
+		}
+		var buf bytes.Buffer
+		if err = tmpl.Execute(&buf, params); err != nil {
+			return "", err
+		}
+		return buf.String(), nil
+	}
 }

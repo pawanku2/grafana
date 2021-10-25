@@ -1,30 +1,13 @@
 package accesscontrol
 
 import (
-	"bytes"
 	"fmt"
-	"html/template"
 	"strings"
 
 	"github.com/grafana/grafana/pkg/infra/log"
 )
 
 var logger = log.New("accesscontrol.evaluator")
-
-//Inject params into the evaluator's templated scopes. e.g. "settings:" + eval.Parameters(":id")
-func ScopeInjector(params ScopeParams) ScopeMutator {
-	return func(scope string) (string, error) {
-		tmpl, err := template.New("scope").Parse(scope)
-		if err != nil {
-			return "", err
-		}
-		var buf bytes.Buffer
-		if err = tmpl.Execute(&buf, params); err != nil {
-			return "", err
-		}
-		return buf.String(), nil
-	}
-}
 
 type Evaluator interface {
 	// Evaluate permissions that are grouped by action

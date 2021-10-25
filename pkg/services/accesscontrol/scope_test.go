@@ -46,7 +46,7 @@ func TestResolveKeywordedScope(t *testing.T) {
 		var err error
 		t.Run(tt.name, func(t *testing.T) {
 			resolver := NewScopeResolver()
-			scopeModifier := resolver.GetResolveKeywordScopeModifier(tt.user)
+			scopeModifier := resolver.GetResolveKeywordScopeMutator(tt.user)
 			tt.permission.Scope, err = scopeModifier(tt.permission.Scope)
 			if tt.wantErr {
 				assert.Error(t, err, "expected an error during the resolution of the scope")
@@ -126,7 +126,7 @@ func TestScopeResolver_ResolveAttribute(t *testing.T) {
 		if tt.initDB != nil {
 			tt.initDB(t, db)
 		}
-		scopeModifier := resolver.GetResolveAttributeScopeModifier(context.TODO(), tt.user)
+		scopeModifier := resolver.GetResolveAttributeScopeMutator(context.TODO(), tt.user)
 		resolvedEvaluator, err := tt.evaluator.MutateScopes(scopeModifier)
 		if tt.wantErr {
 			assert.Error(t, err, "expected an error during the resolution of the scope")
@@ -134,5 +134,41 @@ func TestScopeResolver_ResolveAttribute(t *testing.T) {
 		}
 		assert.NoError(t, err)
 		assert.EqualValues(t, tt.want, resolvedEvaluator, "permission did not match expected resolution")
+	}
+}
+
+func Test_scopePrefix(t *testing.T) {
+	tests := []struct {
+		name  string
+		scope string
+		want  string
+	}{
+		{
+			name:  "empty",
+			scope: "",
+			want:  "",
+		},
+		{
+			name:  "minimal",
+			scope: ":",
+			want:  ":",
+		},
+		{
+			name:  "datasources",
+			scope: "datasources:",
+			want:  "datasources:",
+		},
+		{
+			name:  "datasources name",
+			scope: "datasources:name:testds",
+			want:  "datasources:name:",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			prefix := scopePrefix(tt.scope)
+
+			assert.Equal(t, tt.want, prefix)
+		})
 	}
 }

@@ -73,8 +73,8 @@ func (ac *OSSAccessControlService) Evaluate(ctx context.Context, user *models.Si
 	}
 
 	// TODO perform injection as well?
-	attributeModifier := ac.scopeResolver.GetResolveAttributeScopeModifier(ctx, user)
-	resolvedEvaluator, err := evaluator.MutateScopes(attributeModifier)
+	attributeMutator := ac.scopeResolver.GetResolveAttributeScopeMutator(ctx, user)
+	resolvedEvaluator, err := evaluator.MutateScopes(attributeMutator)
 	if err != nil {
 		return false, err
 	}
@@ -114,7 +114,7 @@ func (ac *OSSAccessControlService) GetUserPermissions(ctx context.Context, user 
 				for _, p := range role.Permissions {
 					var err error
 					// if the permission has a keyword in its scope it will be resolved
-					keywordModifier := ac.scopeResolver.GetResolveKeywordScopeModifier(user)
+					keywordModifier := ac.scopeResolver.GetResolveKeywordScopeMutator(user)
 					p.Scope, err = keywordModifier(p.Scope)
 					if err != nil {
 						return nil, err
