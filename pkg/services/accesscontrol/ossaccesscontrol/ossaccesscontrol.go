@@ -99,10 +99,7 @@ func (ac *OSSAccessControlService) resolveScopeKeyword(p accesscontrol.Permissio
 	// if the permission has a keyword in its scope it will be resolved
 	keywordModifier := ac.scopeResolver.GetResolveKeywordScopeMutator(user)
 	p.Scope, err = keywordModifier(p.Scope)
-	if err != nil {
-		return nil, err
-	}
-	return &p, nil
+	return &p, err
 }
 
 // GetUserPermissions returns user permissions based on built-in roles
@@ -120,8 +117,11 @@ func (ac *OSSAccessControlService) GetUserPermissions(ctx context.Context, user 
 					continue
 				}
 				for _, p := range role.Permissions {
-					ac.resolveScopeKeyword(p, user)
-					permissions = append(permissions, &p)
+					permission, err := ac.resolveScopeKeyword(p, user)
+					if err != nil {
+						return nil, err
+					}
+					permissions = append(permissions, permission)
 				}
 			}
 		}
