@@ -11,11 +11,8 @@ import (
 
 var logger = log.New("accesscontrol.evaluator")
 
-// ScopeModifier alters a Scope to return a new modified Scope
-type ScopeModifier func(string) (string, error)
-
 //Inject params into the evaluator's templated scopes. e.g. "settings:" + eval.Parameters(":id")
-func ScopeInjector(params ScopeParams) ScopeModifier {
+func ScopeInjector(params ScopeParams) ScopeMutator {
 	return func(scope string) (string, error) {
 		tmpl, err := template.New("scope").Parse(scope)
 		if err != nil {
@@ -32,8 +29,8 @@ func ScopeInjector(params ScopeParams) ScopeModifier {
 type Evaluator interface {
 	// Evaluate permissions that are grouped by action
 	Evaluate(permissions map[string]map[string]struct{}) (bool, error)
-	// ModifyScopes executes a sequence of ScopeModifier functions on all embedded scopes of an evaluator and returns a new Evaluator
-	ModifyScopes(...ScopeModifier) (Evaluator, error)
+	// MutateScopes executes a sequence of ScopeModifier functions on all embedded scopes of an evaluator and returns a new Evaluator
+	MutateScopes(...ScopeMutator) (Evaluator, error)
 	// String returns a string representation of permission required by the evaluator
 	String() string
 }
@@ -107,7 +104,7 @@ func match(scope, target string) (bool, error) {
 	return scope == target, nil
 }
 
-func (p permissionEvaluator) ModifyScopes(modifiers ...ScopeModifier) (Evaluator, error) {
+func (p permissionEvaluator) MutateScopes(modifiers ...ScopeMutator) (Evaluator, error) {
 	var err error
 	if p.Scopes == nil {
 		return EvalPermission(p.Action), nil
@@ -151,10 +148,10 @@ func (a allEvaluator) Evaluate(permissions map[string]map[string]struct{}) (bool
 	return true, nil
 }
 
-func (a allEvaluator) ModifyScopes(modifiers ...ScopeModifier) (Evaluator, error) {
+func (a allEvaluator) MutateScopes(modifiers ...ScopeMutator) (Evaluator, error) {
 	var modified []Evaluator
 	for _, e := range a.allOf {
-		i, err := e.ModifyScopes(modifiers...)
+		i, err := e.MutateScopes(modifiers...)
 		if err != nil {
 			return nil, err
 		}
@@ -195,10 +192,10 @@ func (a anyEvaluator) Evaluate(permissions map[string]map[string]struct{}) (bool
 	return false, nil
 }
 
-func (a anyEvaluator) ModifyScopes(modifiers ...ScopeModifier) (Evaluator, error) {
+func (a anyEvaluator) MutateScopes(modifiers ...ScopeMutator) (Evaluator, error) {
 	var modified []Evaluator
 	for _, e := range a.anyOf {
-		i, err := e.ModifyScopes(modifiers...)
+		i, err := e.MutateScopes(modifiers...)
 		if err != nil {
 			return nil, err
 		}

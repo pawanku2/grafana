@@ -127,7 +127,7 @@ func TestScopeResolver_ResolveAttribute(t *testing.T) {
 			tt.initDB(t, db)
 		}
 		scopeModifier := resolver.GetResolveAttributeScopeModifier(context.TODO(), tt.user)
-		resolvedEvaluator, err := tt.evaluator.ModifyScopes(scopeModifier)
+		resolvedEvaluator, err := tt.evaluator.MutateScopes(scopeModifier)
 		if tt.wantErr {
 			assert.Error(t, err, "expected an error during the resolution of the scope")
 			return

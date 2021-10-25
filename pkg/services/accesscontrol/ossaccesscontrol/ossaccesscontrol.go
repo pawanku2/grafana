@@ -74,7 +74,7 @@ func (ac *OSSAccessControlService) Evaluate(ctx context.Context, user *models.Si
 
 	// TODO perform injection as well?
 	attributeModifier := ac.scopeResolver.GetResolveAttributeScopeModifier(ctx, user)
-	resolvedEvaluator, err := evaluator.ModifyScopes(attributeModifier)
+	resolvedEvaluator, err := evaluator.MutateScopes(attributeModifier)
 	if err != nil {
 		return false, err
 	}

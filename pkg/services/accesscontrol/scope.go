@@ -37,6 +37,9 @@ func Field(key string) string {
 	return fmt.Sprintf(`{{ .%s }}`, key)
 }
 
+// ScopeMutator alters a Scope to return a new modified Scope
+type ScopeMutator func(string) (string, error)
+
 type KeywordScopeResolveFunc func(*models.SignedInUser) (string, error)
 
 // ScopeResolver contains a map of functions to resolve scope keywords such as `self` or `current` into `id` based scopes
@@ -77,7 +80,7 @@ func resolveUserSelf(u *models.SignedInUser) (string, error) {
 
 // GetResolveKeywordScopeModifier returns a function to resolves scope with keywords such as `self` or `current` into `id` based scopes
 // TODO discuss if it's worth making this symmetrical with attribute resolution
-func (s *ScopeResolver) GetResolveKeywordScopeModifier(user *models.SignedInUser) ScopeModifier {
+func (s *ScopeResolver) GetResolveKeywordScopeModifier(user *models.SignedInUser) ScopeMutator {
 	return func(scope string) (string, error) {
 		var err error
 		// By default the scope remains unchanged
@@ -112,7 +115,7 @@ func NewDatasourceNameScopeResolver(db *sqlstore.SQLStore) (string, AttributeSco
 }
 
 // GetResolveAttributeScopeModifier returns a function to resolves scopes with attributes such as `name` or `uid` into `id` based scopes
-func (s *ScopeResolver) GetResolveAttributeScopeModifier(ctx context.Context, user *models.SignedInUser) ScopeModifier {
+func (s *ScopeResolver) GetResolveAttributeScopeModifier(ctx context.Context, user *models.SignedInUser) ScopeMutator {
 	return func(scope string) (string, error) {
 		var err error
 		// By default the scope remains unchanged
