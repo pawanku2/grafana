@@ -92,7 +92,6 @@ func (s *ScopeResolver) GetResolveKeywordScopeMutator(user *models.SignedInUser)
 			if err != nil {
 				return "", fmt.Errorf("could not resolve %v: %v", scope, err)
 			}
-
 		}
 		return resolvedScope, nil
 	}
