@@ -120,8 +120,8 @@ func NewDatasourceNameScopeResolver(db *sqlstore.SQLStore) (string, AttributeSco
 func (s *ScopeResolver) GetResolveAttributeScopeMutator(ctx context.Context, user *models.SignedInUser) ScopeMutator {
 	return func(scope string) (string, error) {
 		// Check cache before computing the scope
-		if cacheScope, ok := s.cache.Get(scope); ok {
-			return cacheScope.(string), nil
+		if cachedScope, ok := s.cache.Get(scope); ok {
+			return cachedScope.(string), nil
 		}
 
 		var err error
