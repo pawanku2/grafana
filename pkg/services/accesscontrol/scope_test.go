@@ -2,6 +2,8 @@ package accesscontrol
 
 import (
 	"context"
+	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/grafana/grafana/pkg/models"
@@ -56,6 +58,20 @@ func TestResolveKeywordedScope(t *testing.T) {
 			assert.EqualValues(t, tt.want, tt.permission, "permission did not match expected resolution")
 		})
 	}
+}
+
+func NewTestDatasourceNameScopeResolver(db *sqlstore.SQLStore) (string, AttributeScopeResolveFunc) {
+	dsNameResolver := func(ctx context.Context, user *models.SignedInUser, initialScope string) (string, error) {
+		dsName := strings.Split(initialScope, ":")[2]
+
+		query := models.GetDataSourceQuery{Name: dsName, OrgId: user.OrgId}
+		if err := db.GetDataSource(ctx, &query); err != nil {
+			return "", err
+		}
+
+		return Scope("datasources", "id", fmt.Sprintf("%v", query.Result.Id)), nil
+	}
+	return "datasources:name:", dsNameResolver
 }
 
 func TestScopeResolver_ResolveAttribute(t *testing.T) {
@@ -121,7 +137,7 @@ func TestScopeResolver_ResolveAttribute(t *testing.T) {
 	for _, tt := range tests {
 		db := sqlstore.InitTestDB(t)
 		resolver := NewScopeResolver()
-		resolver.AddAttributeResolver(NewDatasourceNameScopeResolver(db))
+		resolver.AddAttributeResolver(NewTestDatasourceNameScopeResolver(db))
 
 		if tt.initDB != nil {
 			tt.initDB(t, db)

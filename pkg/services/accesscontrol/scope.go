@@ -11,7 +11,6 @@ import (
 
 	"github.com/grafana/grafana/pkg/infra/localcache"
 	"github.com/grafana/grafana/pkg/models"
-	"github.com/grafana/grafana/pkg/services/sqlstore"
 )
 
 // Scope builds scope from parts
@@ -98,22 +97,6 @@ func (s *ScopeResolver) GetResolveKeywordScopeMutator(user *models.SignedInUser)
 }
 
 type AttributeScopeResolveFunc func(ctx context.Context, user *models.SignedInUser, initialScope string) (string, error)
-
-// TODO discuss if that pattern is fine. It will become useful when registering Scope Resolvers that rely on different `Store`.
-// TODO register this from a datasource service, instead?
-func NewDatasourceNameScopeResolver(db *sqlstore.SQLStore) (string, AttributeScopeResolveFunc) {
-	dsNameResolver := func(ctx context.Context, user *models.SignedInUser, initialScope string) (string, error) {
-		dsName := strings.Split(initialScope, ":")[2]
-
-		query := models.GetDataSourceQuery{Name: dsName, OrgId: user.OrgId}
-		if err := db.GetDataSource(ctx, &query); err != nil {
-			return "", err
-		}
-
-		return Scope("datasources", "id", fmt.Sprintf("%v", query.Result.Id)), nil
-	}
-	return "datasources:name:", dsNameResolver
-}
 
 // GetResolveAttributeScopeMutator returns a function to resolve scopes with attributes such as `name` or `uid` into `id` based scopes
 func (s *ScopeResolver) GetResolveAttributeScopeMutator(ctx context.Context, user *models.SignedInUser) ScopeMutator {

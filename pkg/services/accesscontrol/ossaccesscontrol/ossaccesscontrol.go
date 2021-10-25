@@ -9,20 +9,17 @@ import (
 	"github.com/grafana/grafana/pkg/infra/usagestats"
 	"github.com/grafana/grafana/pkg/models"
 	"github.com/grafana/grafana/pkg/services/accesscontrol"
-	"github.com/grafana/grafana/pkg/services/sqlstore"
 	"github.com/grafana/grafana/pkg/setting"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-func ProvideService(cfg *setting.Cfg, usageStats usagestats.Service, db *sqlstore.SQLStore) *OSSAccessControlService {
+func ProvideService(cfg *setting.Cfg, usageStats usagestats.Service) *OSSAccessControlService {
 	s := &OSSAccessControlService{
 		Cfg:           cfg,
 		UsageStats:    usageStats,
 		Log:           log.New("accesscontrol"),
 		scopeResolver: accesscontrol.NewScopeResolver(),
 	}
-	// TODO register from somewhere else?
-	s.scopeResolver.AddAttributeResolver(accesscontrol.NewDatasourceNameScopeResolver(db))
 	s.registerUsageMetrics()
 	return s
 }
