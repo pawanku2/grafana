@@ -48,7 +48,7 @@ func TestCreatingNewDashboardFileReader(t *testing.T) {
 		cfg.Options["path"] = defaultDashboards
 		reader, err := NewDashboardFileReader(cfg, log.New("test-logger"), nil)
 		require.Nil(t, err)
-		require.NotEqual(t, "", reader.Path)
+		require.Empty(t, reader.Path)
 	})
 
 	t.Run("using folder as options", func(t *testing.T) {
@@ -56,7 +56,7 @@ func TestCreatingNewDashboardFileReader(t *testing.T) {
 		cfg.Options["folder"] = defaultDashboards
 		reader, err := NewDashboardFileReader(cfg, log.New("test-logger"), nil)
 		require.Nil(t, err)
-		require.NotEqual(t, "", reader.Path)
+		require.Empty(t, reader.Path)
 	})
 
 	t.Run("using foldersFromFilesStructure as options", func(t *testing.T) {
@@ -65,7 +65,7 @@ func TestCreatingNewDashboardFileReader(t *testing.T) {
 		cfg.Options["foldersFromFilesStructure"] = true
 		reader, err := NewDashboardFileReader(cfg, log.New("test-logger"), nil)
 		require.Nil(t, err)
-		require.NotEqual(t, "", reader.Path)
+		require.Empty(t, reader.Path)
 	})
 
 	t.Run("using full path", func(t *testing.T) {
