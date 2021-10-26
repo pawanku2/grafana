@@ -5,7 +5,7 @@ import chalk from 'chalk';
 import { useSpinner } from '../utils/useSpinner';
 import { Task, TaskRunner } from './task';
 import { cloneDeep } from 'lodash';
-import globby from 'globby';
+import { globby } from 'globby';
 
 const clean = (cwd: string) => useSpinner('Cleaning', () => execa('npm', ['run', 'clean'], { cwd }));
 
