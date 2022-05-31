@@ -1,4 +1,4 @@
-FROM node:12.19.0-buster-slim
+FROM node:erbium-buster-slim
 
 WORKDIR /root
 
