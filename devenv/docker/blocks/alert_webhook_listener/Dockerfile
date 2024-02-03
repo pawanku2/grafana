@@ -1,5 +1,5 @@
 
-FROM golang:latest 
+FROM golang:1.22rc2-bookworm 
 ADD main.go /
 WORKDIR /
 RUN go build -o main . 
